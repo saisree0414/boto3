@@ -1,0 +1,45 @@
+import requests
+
+# Artifactory API endpoints
+base_url = "https://<ARTIFACTORY_URL>"
+virtual_repos_endpoint = "/api/virtual/<REGION>/repos"  # Replace <REGION> with the region name
+repo_endpoint = "/api/repositories/<REPO_KEY>"  # Replace <REPO_KEY> with the repository key
+
+# Replace <REGION_1> and <REGION_2> with the names of the two regions you want to compare
+region_1 = "<REGION_1>"
+region_2 = "<REGION_2>"
+
+# API request headers
+headers = {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer <API_KEY>",  # Replace <API_KEY> with your Artifactory API key
+}
+
+
+def get_associated_repos(region):
+    url = base_url + virtual_repos_endpoint.replace("<REGION>", region)
+    response = requests.get(url, headers=headers)
+    response_json = response.json()
+
+    if response.status_code == 200:
+        associated_repos = []
+        for repo in response_json:
+            associated_repos.extend(repo["repositories"])
+        return set(associated_repos)
+    else:
+        print(f"Failed to retrieve virtual repositories for {region}")
+        return set()
+
+
+# Get associated repositories for each region
+associated_repos_1 = get_associated_repos(region_1)
+associated_repos_2 = get_associated_repos(region_2)
+
+# Compare associated repositories and print the mismatching ones
+mismatching_repos = associated_repos_1.symmetric_difference(associated_repos_2)
+if mismatching_repos:
+    print("Associated repositories mismatch:")
+    for repo in mismatching_repos:
+        print(repo)
+else:
+    print("Associated repositories match.")
