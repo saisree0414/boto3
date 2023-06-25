@@ -35,3 +35,12 @@ if response.status_code == 200:
 
 else:
     print(f"Failed to retrieve permissions for repository {repository_key}. Error: {response.text}")
+
+
+#Get Artifactory Repository Admin
+
+
+#User
+#Python script to get the admin of repository in artifactory which user is part of that repository in jfrog artifactory
+
+#To get the admin of a repository in JFrog Artifactory, you can use the JFrog Artifactory REST API. Here's an example Python script that retrieves the admin of a repository given the user who is a part of that repository:
