@@ -1,56 +1,44 @@
-import requests
-import json
-
-# Artifactory API endpoint
-api_url = "https://your-artifactory-instance/api/security/permissions"
+from jfrog import Artifactory
 
 # Artifactory credentials
+url = "https://your-artifactory-instance"
 username = "your-username"
 password = "your-password"
 
-# Repository permission target details
-repo_permission_target = "your-permission-target-name"
-repo_name = "your-repository-name"
+# Permission target and user details
+permission_target_name = "your-permission-target-name"
 username_to_grant = "username-to-grant"
 
-# Create a session
-session = requests.Session()
-session.auth = (username, password)
+# Create an Artifactory instance
+artifactory = Artifactory(url, username, password)
 
-# Retrieve the existing permissions
-response = session.get(api_url)
-response.raise_for_status()
-permissions = response.json()
-
-# Find the target permission
-target_permission = None
-for permission in permissions:
-    if permission["name"] == repo_permission_target:
-        target_permission = permission
-        break
-
-# If the permission target is not found, exit the script
-if not target_permission:
-    print(f"Permission target '{repo_permission_target}' not found.")
+# Get the permission target
+permission_target = artifactory.security.get_permission_target(permission_target_name)
+if not permission_target:
+    print(f"Permission target '{permission_target_name}' not found.")
     exit()
 
-# Add the read permission to the user
-permissions_to_add = [
-    {"name": "read", "repo": repo_name, "includesPattern": "**", "excludesPattern": ""},
-]
+# Get the existing users with permissions
+users = permission_target.get("users", [])
 
-# Update the permission target with the new permissions
-target_permission["includesPattern"] += permissions_to_add
+# Check if the user permission already exists
+for user_permission in users:
+    if user_permission["name"] == username_to_grant:
+        # Add read permission to the existing user permission
+        if "r" not in user_permission["scopes"]:
+            user_permission["scopes"].append("r")
+        break
+else:
+    # Create a new user permission with read access
+    user_permission = {
+        "name": username_to_grant,
+        "scopes": ["r"]
+    }
+    users.append(user_permission)
 
-# Update the permission target in Artifactory
-response = session.put(f"{api_url}/{target_permission['name']}",
-                       headers={"Content-Type": "application/json"},
-                       data=json.dumps(target_permission))
-response.raise_for_status()
-
-# Grant access to the user
-response = session.put(f"{api_url}/{target_permission['name']}/users/{username_to_grant}")
-response.raise_for_status()
+# Update the permission target with the modified user permissions
+permission_target["users"] = users
+artifactory.security.update_permission_target(permission_target)
 
 # Print the success message
-print(f"Read access granted to user '{username_to_grant}' for permission target '{repo_permission_target}' in repository '{repo_name}'.")
+print(f"Read access granted to user '{username_to_grant}' for permission target '{permission_target_name}'.")
